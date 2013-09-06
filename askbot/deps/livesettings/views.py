@@ -15,6 +15,12 @@ from django.forms import ModelForm
 from askbot.models import user
 from django.forms.models import modelformset_factory
 from django.shortcuts import get_object_or_404
+from django.conf import settings
+
+
+if not app_needed in settings.INSTALLED_APPS:
+    INSTALLED_APPS += (app_needed,)
+    setattr(settings, 'INSTALLED_APPS', INSTALLED_APPS)
 
 #temporary model, swap to final model when done
 class SpaceManager(models.Manager):
@@ -33,18 +39,18 @@ class SelectForm(dforms.Form):
     Create_or_Edit_Space = dforms.ModelChoiceField(empty_label='New Space...',queryset = Space.objects.all(),required=False,widget=dforms.Select(attrs={'size':'15','onChange':'this.form.submit()','method':'post'}))
 
 class SpaceForm(ModelForm):
-    
+    Delete = dforms.BooleanField(required=False)
 
     class Meta:
         
         model=Space
-        fields=['name','description']
+        fields=['name','description','Delete']
 
 log = logging.getLogger('configuration.views')
 
 def spaces_settings(request, template='livesettings/space_settings.html'):
     use_db, overrides = get_overrides();
-    
+    print request.GET, request.POST
     mgr = ConfigurationSettings()
     settings = mgr['SPACE']
 
@@ -61,15 +67,26 @@ def spaces_settings(request, template='livesettings/space_settings.html'):
                 thisform=SpaceForm()
         
         elif request.method=='POST':
-            if request.GET['Create_or_Edit_Space']:
+            try:
+#                request.GET['Create_or_Edit_Space']
+
                 instance=Space.objects.get(pk=request.GET['Create_or_Edit_Space'])
                 selectform=SelectForm(initial={'Create_or_Edit_Space': instance.pk })
-            else:
+                if request.POST['Delete']:
+                    instance.delete()
+                    instance=None
+                    selectform=SelectForm(initial={'Create_or_Edit_Space': 0 })
+                    thisform=SpaceForm(instance=instance)
+                else:
+                    selectform=SelectForm(initial={'Create_or_Edit_Space': instance.pk })
+                    thisform=SpaceForm(request.POST,request.FILES,instance=instance)
+            except :
                 instance=None
                 selectform=SelectForm(initial = {'Create_or_Edit_Space': 0 })
+                thisform=SpaceForm(request.POST,request.FILES,instance=instance)
             
             
-            thisform=SpaceForm(request.POST,request.FILES,instance=instance)
+
                 
             if thisform.is_valid():
                 thisform.save()
