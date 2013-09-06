@@ -18,8 +18,8 @@ from django.shortcuts import get_object_or_404
 from django.conf import settings
 
 
-if not app_needed in settings.INSTALLED_APPS:
-    INSTALLED_APPS += (app_needed,)
+if not 'askbot.deps.livesettings' in settings.INSTALLED_APPS:
+    INSTALLED_APPS += ('askbot.deps.livesettings',)
     setattr(settings, 'INSTALLED_APPS', INSTALLED_APPS)
 
 #temporary model, swap to final model when done
